@@ -1,0 +1,15 @@
+Description: Fix FTBFS with FFmpeg 4.0
+Author: James Cowgill <jcowgill@debian.org>
+Bug-Debian: https://bugs.debian.org/888346
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/libffmpegthumbnailer/moviedecoder.cpp
++++ b/libffmpegthumbnailer/moviedecoder.cpp
+@@ -30,7 +30,6 @@ extern "C" {
+ #include <libavutil/opt.h>
+ #include <libavutil/imgutils.h>
+ #include <libavfilter/avfilter.h>
+-#include <libavfilter/avfiltergraph.h>
+ #include <libavfilter/buffersink.h>
+ #include <libavfilter/buffersrc.h>
+ }

@@ -1,0 +1,4 @@
+version=3
+
+opts=filenamemangle=s/.+\/v?(\d\S*)\.tar\.gz/ffmpegthumbnailer-$1\.tar\.gz/ \
+  https://github.com/dirkvdb/ffmpegthumbnailer/tags .*/v?(\d\S*)\.tar\.gz	debian debian/orig-tar.sh

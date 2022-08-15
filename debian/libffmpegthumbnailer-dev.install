@@ -1,0 +1,3 @@
+usr/include/libffmpegthumbnailer
+usr/lib/*/libffmpegthumbnailer*.so
+usr/lib/*/pkgconfig
