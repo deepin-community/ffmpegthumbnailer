@@ -19,12 +19,12 @@
 #include "videothumbnailer.h"
 
 #include "histogram.h"
+#include "histogramutils.h"
 #include "moviedecoder.h"
 #include "stringoperations.h"
 #include "filmstripfilter.h"
 #include "imagewriterfactory.h"
 
-#include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <cfloat>
@@ -32,6 +32,9 @@
 #include <stdexcept>
 #include <cassert>
 #include <cerrno>
+#include <cstring>
+#include <memory>
+#include <regex>
 #include <algorithm>
 #include <sys/stat.h>
 
@@ -43,28 +46,26 @@ namespace ffmpegthumbnailer
 static const int SMART_FRAME_ATTEMPTS = 25;
 
 VideoThumbnailer::VideoThumbnailer()
-: m_ThumbnailSize(128)
+: m_ThumbnailSize("128")
 , m_SeekPercentage(10)
 , m_OverlayFilmStrip(false)
 , m_WorkAroundIssues(false)
 , m_ImageQuality(8)
 , m_MaintainAspectRatio(true)
 , m_SmartFrameSelection(false)
+, m_PreferEmbeddedMetadata(false)
 {
 }
 
 VideoThumbnailer::VideoThumbnailer(int thumbnailSize, bool workaroundIssues, bool maintainAspectRatio, int imageQuality, bool smartFrameSelection)
-: m_ThumbnailSize(thumbnailSize)
+: m_ThumbnailSize(std::to_string(thumbnailSize))
 , m_SeekPercentage(10)
 , m_OverlayFilmStrip(false)
 , m_WorkAroundIssues(workaroundIssues)
 , m_ImageQuality(imageQuality)
 , m_MaintainAspectRatio(maintainAspectRatio)
 , m_SmartFrameSelection(smartFrameSelection)
-{
-}
-
-VideoThumbnailer::~VideoThumbnailer()
+, m_PreferEmbeddedMetadata(false)
 {
 }
 
@@ -81,6 +82,45 @@ void VideoThumbnailer::setSeekTime(const std::string& seekTime)
 
 void VideoThumbnailer::setThumbnailSize(int size)
 {
+    m_ThumbnailSize = std::to_string(size);
+}
+
+void VideoThumbnailer::setThumbnailSize(int width, int height)
+{
+    std::stringstream ss;
+    if (width > 0)
+    {
+        ss << "w=" << width;
+    }
+
+    if (width > 0 && height > 0)
+    {
+        ss << ":";
+    }
+
+    if (height > 0)
+    {
+        ss << "h=" << height;
+    }
+
+    m_ThumbnailSize = ss.str();
+}
+
+void VideoThumbnailer::setThumbnailSize(const std::string& size)
+{
+    if (size.find('=') == std::string::npos)
+    {
+        m_ThumbnailSize = size;
+        return;
+    }
+
+    std::regex sizeRegex(R"r(([w|h])=(-?\d+)(?::([w|h])=(-?\d+))?)r");
+    std::smatch baseMatch;
+    if (!std::regex_match(size, baseMatch, sizeRegex))
+    {
+        throw std::invalid_argument("Invalid size string specification");
+    }
+
     m_ThumbnailSize = size;
 }
 
@@ -99,6 +139,11 @@ void VideoThumbnailer::setMaintainAspectRatio(bool enabled)
     m_MaintainAspectRatio = enabled;
 }
 
+void VideoThumbnailer::setPreferEmbeddedMetadata(bool enabled)
+{
+    m_PreferEmbeddedMetadata = enabled;
+}
+
 void VideoThumbnailer::setSmartFrameSelection(bool enabled)
 {
     m_SmartFrameSelection = enabled;
@@ -112,33 +157,34 @@ int timeToSeconds(const std::string& time)
     return (hours * 3600) + (minutes * 60) + seconds;
 }
 
-void VideoThumbnailer::generateThumbnail(const string& videoFile, ImageWriter& imageWriter, AVFormatContext* pAvContext)
+VideoFrameInfo VideoThumbnailer::generateThumbnail(const string& videoFile, ImageWriter& imageWriter, AVFormatContext* pAvContext)
 {
-    MovieDecoder movieDecoder(videoFile, pAvContext);
+    MovieDecoder movieDecoder(pAvContext);
+    movieDecoder.initialize(videoFile, m_PreferEmbeddedMetadata);
     movieDecoder.decodeVideoFrame(); //before seeking, a frame has to be decoded
 
-    if ((!m_WorkAroundIssues) || (movieDecoder.getCodec() != "h264")) //workaround for bug in older ffmpeg (100% cpu usage when seeking in h264 files)
+    if (!movieDecoder.embeddedMetaDataIsAvailable())
     {
         try
         {
             int secondToSeekTo = m_SeekTime.empty() ? movieDecoder.getDuration() * m_SeekPercentage / 100
-													: timeToSeconds(m_SeekTime);
+                                                    : timeToSeconds(m_SeekTime);
             movieDecoder.seek(secondToSeekTo);
         }
         catch (const exception& e)
         {
-            TraceMessage(ThumbnailerLogLevelError, std::string(e.what()) + ", will use first frame.");  
-            
+            TraceMessage(ThumbnailerLogLevelError, std::string(e.what()) + ", will use first frame.");
+
             //seeking failed, try the first frame again
             movieDecoder.destroy();
-            movieDecoder.initialize(videoFile);
+            movieDecoder.initialize(videoFile, m_PreferEmbeddedMetadata);
             movieDecoder.decodeVideoFrame();
-         }
+        }
     }
 
     VideoFrame  videoFrame;
 
-    if (m_SmartFrameSelection)
+    if (m_SmartFrameSelection && !movieDecoder.embeddedMetaDataIsAvailable())
     {
         try
         {
@@ -146,7 +192,7 @@ void VideoThumbnailer::generateThumbnail(const string& videoFile, ImageWriter& i
         }
         catch (const exception& e)
         {
-            TraceMessage(ThumbnailerLogLevelError, std::string(e.what()) + ". Smart frame selection failed. Retrying without smart frame detection.");  
+            TraceMessage(ThumbnailerLogLevelError, std::string(e.what()) + ". Smart frame selection failed. Retrying without smart frame detection.");
             m_SmartFrameSelection = false;
             generateThumbnail(videoFile, imageWriter, pAvContext);
         }
@@ -159,12 +205,19 @@ void VideoThumbnailer::generateThumbnail(const string& videoFile, ImageWriter& i
     applyFilters(videoFrame);
 
     vector<uint8_t*> rowPointers;
+    rowPointers.reserve(videoFrame.height);
     for (int i = 0; i < videoFrame.height; ++i)
     {
         rowPointers.push_back(&(videoFrame.frameData[i * videoFrame.lineSize]));
     }
 
     writeImage(videoFile, imageWriter, videoFrame, movieDecoder.getDuration(), rowPointers);
+
+    VideoFrameInfo info;
+    info.width = videoFrame.width;
+    info.height = videoFrame.height;
+    info.source = videoFrame.imageSource;
+    return info;
 }
 
 void VideoThumbnailer::generateSmartThumbnail(MovieDecoder& movieDecoder, VideoFrame& videoFrame)
@@ -176,7 +229,7 @@ void VideoThumbnailer::generateSmartThumbnail(MovieDecoder& movieDecoder, VideoF
     {
         movieDecoder.decodeVideoFrame();
         movieDecoder.getScaledVideoFrame(m_ThumbnailSize, m_MaintainAspectRatio, videoFrames[i]);
-        generateHistogram(videoFrames[i], histograms[i]);
+        utils::generateHistogram(videoFrames[i], histograms[i]);
     }
 
     int bestFrame = getBestThumbnailIndex(videoFrames, histograms);
@@ -185,26 +238,30 @@ void VideoThumbnailer::generateSmartThumbnail(MovieDecoder& movieDecoder, VideoF
     videoFrame = videoFrames[bestFrame];
 }
 
-void VideoThumbnailer::generateThumbnail(const string& videoFile, ThumbnailerImageType type, const string& outputFile, AVFormatContext* pAvContext)
+VideoFrameInfo VideoThumbnailer::generateThumbnail(const string& videoFile, ThumbnailerImageType type, const string& outputFile, AVFormatContext* pAvContext)
 {
-    ImageWriter* imageWriter = ImageWriterFactory<const string&>::createImageWriter(type, outputFile);
-    generateThumbnail(videoFile, *imageWriter, pAvContext);
-    delete imageWriter;
+    std::unique_ptr<ImageWriter> imageWriter(ImageWriterFactory<const string&>::createImageWriter(type, outputFile));
+    return generateThumbnail(videoFile, *imageWriter, pAvContext);
 }
 
-void VideoThumbnailer::generateThumbnail(const string& videoFile, ThumbnailerImageType type, vector<uint8_t>& buffer, AVFormatContext* pAvContext)
+VideoFrameInfo VideoThumbnailer::generateThumbnail(const string& videoFile, ThumbnailerImageType type, vector<uint8_t>& buffer, AVFormatContext* pAvContext)
 {
     buffer.clear();
-    ImageWriter* imageWriter = ImageWriterFactory<vector<uint8_t>&>::createImageWriter(type, buffer);
-    generateThumbnail(videoFile, *imageWriter, pAvContext);
-    delete imageWriter;
+    std::unique_ptr<ImageWriter> imageWriter(ImageWriterFactory<vector<uint8_t>&>::createImageWriter(type, buffer));
+    return generateThumbnail(videoFile, *imageWriter, pAvContext);
 }
 
 void VideoThumbnailer::writeImage(const string& videoFile, ImageWriter& imageWriter, const VideoFrame& videoFrame, int duration, vector<uint8_t*>& rowPointers)
 {
+    if (videoFrame.width == 0 || videoFrame.height == 0)
+    {
+        throw std::runtime_error("No video frame could be decoded");
+    }
+
     if ((videoFile != "-") &&
         (videoFile.compare(0, 7, "rtsp://") != 0) &&
         (videoFile.compare(0, 6, "udp://") != 0) &&
+        (videoFile.compare(0, 8, "https://") != 0) &&
         (videoFile.compare(0, 7, "http://") != 0))
     {
         struct stat statInfo;
@@ -215,7 +272,7 @@ void VideoThumbnailer::writeImage(const string& videoFile, ImageWriter& imageWri
         }
         else
         {
-            cout << "Warn: Failed to stat file " << videoFile << " (" << strerror(errno) << ")" << endl;
+            TraceMessage(ThumbnailerLogLevelError, std::string("Failed to stat file ") + videoFile + " (" + strerror(errno) + ")");
         }
 
         string mimeType = getMimeType(videoFile);
@@ -320,30 +377,15 @@ void VideoThumbnailer::applyFilters(VideoFrame& frameData)
     }
 }
 
-void VideoThumbnailer::generateHistogram(const VideoFrame& videoFrame, Histogram<int>& histogram)
-{
-    for (int i = 0; i < videoFrame.height; ++i)
-    {
-        int pixelIndex = i * videoFrame.lineSize;
-        for (int j = 0; j < videoFrame.width * 3; j += 3)
-        {
-            ++histogram.r[videoFrame.frameData[pixelIndex + j]];
-            ++histogram.g[videoFrame.frameData[pixelIndex + j + 1]];
-            ++histogram.b[videoFrame.frameData[pixelIndex + j + 2]];
-        }
-    }
-}
-
 int VideoThumbnailer::getBestThumbnailIndex(vector<VideoFrame>& videoFrames, const vector<Histogram<int> >& histograms)
 {
     Histogram<float> avgHistogram;
-    for (size_t i = 0; i < histograms.size(); ++i)
-    {
+    for (auto&& histogram : histograms) {
         for (int j = 0; j < 255; ++j)
         {
-            avgHistogram.r[j] += static_cast<float>(histograms[i].r[j]) / histograms.size();
-            avgHistogram.g[j] += static_cast<float>(histograms[i].g[j]) / histograms.size();
-            avgHistogram.b[j] += static_cast<float>(histograms[i].b[j]) / histograms.size();
+            avgHistogram.r[j] += static_cast<float>(histogram.r[j]) / histograms.size();
+            avgHistogram.g[j] += static_cast<float>(histogram.g[j]) / histograms.size();
+            avgHistogram.b[j] += static_cast<float>(histogram.b[j]) / histograms.size();
         }
     }
 
@@ -371,12 +413,11 @@ int VideoThumbnailer::getBestThumbnailIndex(vector<VideoFrame>& videoFrames, con
 #ifdef DEBUG_MODE
         stringstream outputFile;
         outputFile << "frames/Frame" << setfill('0') << setw(3) << i << "_" << rmse << endl;
-        ImageWriter* imageWriter = ImageWriterFactory<const string&>::createImageWriter(Png, outputFile.str());
+        std::unique_ptr<ImageWriter> imageWriter(ImageWriterFactory<const string&>::createImageWriter(Png, outputFile.str()));
         vector<uint8_t*> rowPointers;
         for (int x = 0; x < videoFrames[i].height; ++x)
             rowPointers.push_back(&(videoFrames[i].frameData[x * videoFrames[i].lineSize]));
         imageWriter->writeFrame(&(rowPointers.front()), videoFrames[i].width, videoFrames[i].height, m_ImageQuality);
-        delete imageWriter;
 #endif
     }
 

@@ -1,1 +1,8 @@
-.pc/
+out
+.idea
+build
+*.sublime-workspace
+xcode
+.cmaketools.json
+launch.json
+.vscode/cquery_cached_index

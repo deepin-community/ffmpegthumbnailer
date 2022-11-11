@@ -37,22 +37,31 @@ class MovieDecoder;
 template <typename T>
 struct Histogram;
 
+struct VideoFrameInfo
+{
+    int width = 0;
+    int height = 0;
+    ThumbnailerImageSource source = ThumbnailerImageSourceVideoStream;
+};
+
 class VideoThumbnailer
 {
 public:
     VideoThumbnailer();
     VideoThumbnailer(int thumbnailSize, bool workaroundIssues, bool maintainAspectRatio, int imageQuality, bool smartFrameSelection);
-    ~VideoThumbnailer();
 
-    void generateThumbnail(const std::string& videoFile, ThumbnailerImageType type, const std::string& outputFile, AVFormatContext* pAvContext = nullptr);
-    void generateThumbnail(const std::string& videoFile, ThumbnailerImageType type, std::vector<uint8_t>& buffer, AVFormatContext* pAvContext = nullptr);
+    VideoFrameInfo generateThumbnail(const std::string& videoFile, ThumbnailerImageType type, const std::string& outputFile, AVFormatContext* pAvContext = nullptr);
+    VideoFrameInfo generateThumbnail(const std::string& videoFile, ThumbnailerImageType type, std::vector<uint8_t>& buffer, AVFormatContext* pAvContext = nullptr);
 
     void setThumbnailSize(int size);
+    void setThumbnailSize(int width, int height);
+    void setThumbnailSize(const std::string& size);
     void setSeekPercentage(int percentage);
     void setSeekTime(const std::string& seekTime);
     void setWorkAroundIssues(bool workAround);
     void setImageQuality(int imageQuality);
     void setMaintainAspectRatio(bool enabled);
+    void setPreferEmbeddedMetadata(bool enabled);
     void setSmartFrameSelection(bool enabled);
     void addFilter(IFilter* pFilter);
     void removeFilter(IFilter* pFilter);
@@ -61,33 +70,31 @@ public:
     void setLogCallback(std::function<void(ThumbnailerLogLevel, const std::string&)> cb);
 
 private:
-    void generateThumbnail(const std::string& videoFile, ImageWriter& imageWriter, AVFormatContext* pAvContext = nullptr);
+    VideoFrameInfo generateThumbnail(const std::string& videoFile, ImageWriter& imageWriter, AVFormatContext* pAvContext = nullptr);
     void generateSmartThumbnail(MovieDecoder& movieDecoder, VideoFrame& videoFrame);
     void writeImage(const std::string& videoFile, ImageWriter& imageWriter, const VideoFrame& videoFrame, int duration, std::vector<uint8_t*>& rowPointers);
 
     std::string getMimeType(const std::string& videoFile);
     std::string getExtension(const std::string& videoFilename);
 
-    void generateHistogram(const VideoFrame& videoFrame, Histogram<int>& histogram);
     int getBestThumbnailIndex(std::vector<VideoFrame>& videoFrames, const std::vector<Histogram<int> >& histograms);
     void applyFilters(VideoFrame& frameData);
 
     void TraceMessage(ThumbnailerLogLevel lvl, const std::string& msg);
 
 private:
-    int                                             m_ThumbnailSize;
+    std::string                                     m_ThumbnailSize;
     uint16_t                                        m_SeekPercentage;
     bool                                            m_OverlayFilmStrip;
     bool                                            m_WorkAroundIssues;
     int                                             m_ImageQuality;
     bool                                            m_MaintainAspectRatio;
     bool                                            m_SmartFrameSelection;
+    bool                                            m_PreferEmbeddedMetadata;
     std::string                                     m_SeekTime;
     std::vector<IFilter*>                           m_Filters;
 
     std::function<void(ThumbnailerLogLevel, const std::string&)> m_LogCb;
-
-    friend class VideoThumbnailerTest;
 };
 
 }

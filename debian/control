@@ -1,19 +1,31 @@
 Source: ffmpegthumbnailer
 Section: video
 Priority: optional
-Maintainer: Deepin Developer <deepin-dev@deepin.org>
-Build-Depends: debhelper (>= 9), pkg-config, libavutil-dev, libavformat-dev,
- libavcodec-dev (>= 4:0.6~svn20100505-1~), libavfilter-dev, libpng-dev,
- libjpeg-dev, dpkg-dev (>= 1.16.1), cmake
-Standards-Version: 3.9.6
-Homepage: http://code.google.com/p/ffmpegthumbnailer/
-Vcs-Svn: https://bollin.googlecode.com/svn/ffmpegthumbnailer/trunk/
-#Vcs-Browser
+Maintainer: Debian Multimedia Maintainers <debian-multimedia@lists.debian.org>
+Uploaders:
+ Boyuan Yang <byang@debian.org>,
+Build-Depends:
+ cmake,
+ debhelper-compat (= 13),
+ libavcodec-dev (>= 4:0.6~svn20100505-1~),
+ libavfilter-dev,
+ libavformat-dev,
+ libavutil-dev,
+ libjpeg-dev,
+ libpng-dev,
+ pkg-config,
+Standards-Version: 4.6.0
+Homepage: https://github.com/dirkvdb/ffmpegthumbnailer
+Vcs-Git: https://salsa.debian.org/multimedia-team/ffmpegthumbnailer.git
+Vcs-Browser: https://salsa.debian.org/multimedia-team/ffmpegthumbnailer
 
 Package: ffmpegthumbnailer
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Suggests: libglib2.0-0
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Suggests:
+ libglib2.0-0,
 Description: fast and lightweight video thumbnailer
  FFmpegthumbnailer is a lightweight video thumbnailer that can be used by file
  managers to create thumbnails for your video files. The thumbnailer uses ffmpeg
@@ -22,23 +34,12 @@ Description: fast and lightweight video thumbnailer
  .
  This package contains the ffmpegthumbnailer executable.
 
-Package: libffmpegthumbnailer4v5
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Conflicts: libffmpegthumbnailer4
-Replaces: libffmpegthumbnailer4
-Description: shared library for ffmpegthumbnailer
- FFmpegthumbnailer is a lightweight video thumbnailer that can be used by file
- managers to create thumbnails for your video files. The thumbnailer uses ffmpeg
- to decode frames from the video files, so supported videoformats depend on the
- configuration flags of ffmpeg.
- .
- This package contains the shared library for ffmpegthumbnailer framework.
-
 Package: libffmpegthumbnailer-dev
 Section: libdevel
 Architecture: any
-Depends: libffmpegthumbnailer4v5 (= ${binary:Version}), ${misc:Depends}
+Depends:
+ libffmpegthumbnailer4v5 (= ${binary:Version}),
+ ${misc:Depends},
 Description: development files for ffmpegthumbnailer
  FFmpegthumbnailer is a lightweight video thumbnailer that can be used by file
  managers to create thumbnails for your video files. The thumbnailer uses ffmpeg
@@ -47,15 +48,20 @@ Description: development files for ffmpegthumbnailer
  .
  This package contains the development files distributed with ffmpegthumbnailer.
 
-Package: ffmpegthumbnailer-dbg
-Section: debug
-Priority: extra
+Package: libffmpegthumbnailer4v5
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ffmpegthumbnailer (= ${binary:Version})
-Description: debugging information for ffmpegthumbnailer
+Multi-Arch: same
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Conflicts:
+ libffmpegthumbnailer4,
+Replaces:
+ libffmpegthumbnailer4,
+Description: shared library for ffmpegthumbnailer
  FFmpegthumbnailer is a lightweight video thumbnailer that can be used by file
  managers to create thumbnails for your video files. The thumbnailer uses ffmpeg
  to decode frames from the video files, so supported videoformats depend on the
  configuration flags of ffmpeg.
  .
- This package contains the debugging symbols for ffmpegthumbnailer.
+ This package contains the shared library for ffmpegthumbnailer framework.

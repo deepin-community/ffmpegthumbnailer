@@ -21,6 +21,7 @@ typedef enum ThumbnailerImageTypeEnum
 {
     Png,
     Jpeg,
+    Rgb,
     Unknown
 } ThumbnailerImageType;
 

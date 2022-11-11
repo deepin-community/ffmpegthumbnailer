@@ -26,10 +26,15 @@
 
 #include "ffmpegthumbnailertypes.h"
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-}
+struct AVFilterGraph;
+struct AVFilterContext;
+struct AVFormatContext;
+struct AVCodecContext;
+struct AVCodec;
+struct AVStream;
+struct AVFrame;
+struct AVPacket;
+struct AVRational;
 
 namespace ffmpegthumbnailer
 {
@@ -39,44 +44,50 @@ struct VideoFrame;
 class MovieDecoder
 {
 public:
-    MovieDecoder(const std::string& filename, AVFormatContext* pavContext = NULL);
+    MovieDecoder(AVFormatContext* pavContext = nullptr);
     ~MovieDecoder();
 
     std::string getCodec();
     void seek(int timeInSeconds);
     void decodeVideoFrame();
-    void getScaledVideoFrame(int scaledSize, bool maintainAspectRatio, VideoFrame& videoFrame);
+    void getScaledVideoFrame(const std::string& scaledSize, bool maintainAspectRatio, VideoFrame& videoFrame);
 
     int getWidth();
     int getHeight();
     int getDuration();
 
-    void initialize(const std::string& filename);
+    void initialize(const std::string& filename, bool preferEmbeddedMetadata);
     void destroy();
 
+    bool embeddedMetaDataIsAvailable();
+
 private:
-    void initializeVideo();
-    void initializeFilterGraph();
+    int32_t findPreferedVideoStream(bool preferEmbeddedMetadata);
+
+    void initializeVideo(bool preferEmbeddedMetadata);
+    void initializeFilterGraph(const AVRational& timeBase, const std::string& size, bool maintainAspectRatio);
 
     bool decodeVideoPacket();
     bool getVideoPacket();
-    void convertAndScaleFrame(AVPixelFormat format, int scaledSize, bool maintainAspectRatio, int& scaledWidth, int& scaledHeight);
-    void createAVFrame(AVFrame** pAvFrame, uint8_t** pFrameBuffer, int width, int height, AVPixelFormat format);
-    void calculateDimensions(int squareSize, bool maintainAspectRatio, int& destWidth, int& destHeight);
+    int32_t getStreamRotation();
+    std::string createScaleString(const std::string& size, bool maintainAspectRatio);
 
-    void addLogCallback();
+    void checkRc(int ret, const std::string& message);
 
 private:
     int                     m_VideoStream;
     AVFormatContext*        m_pFormatContext;
     AVCodecContext*         m_pVideoCodecContext;
-    AVCodec*                m_pVideoCodec;
+    const AVCodec*          m_pVideoCodec;
+    AVFilterGraph*          m_pFilterGraph;
+    AVFilterContext*        m_pFilterSource;
+    AVFilterContext*        m_pFilterSink;
     AVStream*               m_pVideoStream;
     AVFrame*                m_pFrame;
-    uint8_t*                m_pFrameBuffer;
     AVPacket*               m_pPacket;
     bool                    m_FormatContextWasGiven;
     bool                    m_AllowSeek;
+    bool                    m_UseEmbeddedData;
 };
 
 }

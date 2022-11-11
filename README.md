@@ -5,11 +5,11 @@
 
 FFmpegthumbnailer is a lightweight video thumbnailer that can be used by file
 managers to create thumbnails for your video files. The thumbnailer uses ffmpeg
-o decode frames from the video files, so supported videoformats depend on the
+to decode frames from the video files, so supported videoformats depend on the
 configuration flags of ffmpeg.
 
 This thumbnailer was designed to be as fast and lightweight as possible. The
-only dependencies are ffmpeg and libpng.
+only dependencies are ffmpeg and libpng/libjpeg.
 
 # Usage #
 ffmpegthumbnailer is called from the command line
@@ -24,4 +24,5 @@ Available command line arguments:
   * -c: override image format (jpeg or png) (default: determined by filename)
   * -a: ignore aspect ratio and generate square thumbnail
   * -w: workaround some issues in older versions of ffmpeg (only use if you experience problems like 100% cpu usage on certain files)
+  * -rN: repeat thumbnail generation each N seconds, N=0 means disable repetition (default: 0)
   * -h: display the usage
