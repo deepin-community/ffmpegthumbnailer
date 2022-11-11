@@ -14,37 +14,29 @@
 //    along with this program; if not, write to the Free Software
 //    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#ifndef PNG_WRITER_H
-#define PNG_WRITER_H
+#pragma once
 
-#include <string>
-#include <vector>
-#include <png.h>
-
-#include "imagewriter.h"
+#include "videoframe.h"
+#include "histogram.h"
 
 namespace ffmpegthumbnailer
 {
-
-class PngWriter : public ImageWriter
+namespace utils
 {
-public:
-    PngWriter(const std::string& outputFile);
-    PngWriter(std::vector<uint8_t>& outputBuffer);
-    ~PngWriter();
 
-    void setText(const std::string& key, const std::string& value);
-    void writeFrame(uint8_t** rgbData, int width, int height, int quality);
-
-private:
-    void init();
-
-private:
-    FILE*                   m_FilePtr;
-    png_structp             m_PngPtr;
-    png_infop               m_InfoPtr;
-};
-
+inline void generateHistogram(const VideoFrame& videoFrame, Histogram<int>& histogram)
+{
+    for (int i = 0; i < videoFrame.height; ++i)
+    {
+        int pixelIndex = i * videoFrame.lineSize;
+        for (int j = 0; j < videoFrame.width * 3; j += 3)
+        {
+            ++histogram.r[videoFrame.frameData[pixelIndex + j]];
+            ++histogram.g[videoFrame.frameData[pixelIndex + j + 1]];
+            ++histogram.b[videoFrame.frameData[pixelIndex + j + 2]];
+        }
+    }
 }
 
-#endif
+}
+}

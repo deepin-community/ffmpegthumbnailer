@@ -14,35 +14,31 @@
 //    along with this program; if not, write to the Free Software
 //    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#ifndef PNG_WRITER_H
-#define PNG_WRITER_H
+#ifndef RGB_WRITER_H
+#define RGB_WRITER_H
 
 #include <string>
 #include <vector>
-#include <png.h>
+#include <fstream>
 
 #include "imagewriter.h"
 
 namespace ffmpegthumbnailer
 {
 
-class PngWriter : public ImageWriter
+class RgbWriter : public ImageWriter
 {
 public:
-    PngWriter(const std::string& outputFile);
-    PngWriter(std::vector<uint8_t>& outputBuffer);
-    ~PngWriter();
+    RgbWriter(const std::string& outputFile);
+    RgbWriter(std::vector<uint8_t>& outputBuffer);
+    ~RgbWriter();
 
-    void setText(const std::string& key, const std::string& value);
-    void writeFrame(uint8_t** rgbData, int width, int height, int quality);
-
-private:
-    void init();
+    void setText(const std::string& key, const std::string& value) override;
+    void writeFrame(uint8_t** rgbData, int width, int height, int quality) override;
 
 private:
     FILE*                   m_FilePtr;
-    png_structp             m_PngPtr;
-    png_infop               m_InfoPtr;
+    std::vector<uint8_t>*   m_OutputBuffer;
 };
 
 }
