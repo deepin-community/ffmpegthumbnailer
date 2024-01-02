@@ -1,3 +1,19 @@
+ffmpegthumbnailer (2.2.2+git20220218+dfsg-2) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Remove constraints unnecessary since buster:
+    + Build-Depends: Drop versioned constraint on libavcodec-dev.
+  * Trim trailing whitespace.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository-Browse.
+  * Update standards version to 4.6.2, no changes needed.
+  * Apply multi-arch hints.
+    + libffmpegthumbnailer-dev: Add Multi-Arch: same.
+
+  [ Boyuan Yang ]
+  * Rebuild against ffmpeg 6.0.
+
+ -- Boyuan Yang <byang@debian.org>  Wed, 20 Sep 2023 15:44:29 -0400
+
 ffmpegthumbnailer (2.2.2+git20220218+dfsg-1) unstable; urgency=medium
 
   * New upstream snapshot.
@@ -244,10 +260,10 @@ ffmpegthumbnailer (1.5.2-1) unstable; urgency=low
 
   [ Soeren Sonnenburg ]
   * New upstream release:
-    - Optional compilation of jpeg and png support 
-    - Fixed ffmpeg CFLAGS issue (causing compilation errors on Fedora) 
+    - Optional compilation of jpeg and png support
+    - Fixed ffmpeg CFLAGS issue (causing compilation errors on Fedora)
     - Fixed build error against latest ffmpeg (verified against ffmpeg
-            revision 18769) 
+            revision 18769)
     - Fixed missing include files for library usage (thanks to gustavo.boiko)
 
   [ Lionel Le Folgoc ]

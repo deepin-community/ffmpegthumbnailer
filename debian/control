@@ -7,14 +7,14 @@ Uploaders:
 Build-Depends:
  cmake,
  debhelper-compat (= 13),
- libavcodec-dev (>= 4:0.6~svn20100505-1~),
+ libavcodec-dev,
  libavfilter-dev,
  libavformat-dev,
  libavutil-dev,
  libjpeg-dev,
  libpng-dev,
  pkg-config,
-Standards-Version: 4.6.0
+Standards-Version: 4.6.2
 Homepage: https://github.com/dirkvdb/ffmpegthumbnailer
 Vcs-Git: https://salsa.debian.org/multimedia-team/ffmpegthumbnailer.git
 Vcs-Browser: https://salsa.debian.org/multimedia-team/ffmpegthumbnailer
@@ -37,6 +37,7 @@ Description: fast and lightweight video thumbnailer
 Package: libffmpegthumbnailer-dev
 Section: libdevel
 Architecture: any
+Multi-Arch: same
 Depends:
  libffmpegthumbnailer4v5 (= ${binary:Version}),
  ${misc:Depends},
