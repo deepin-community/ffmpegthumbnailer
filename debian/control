@@ -1,9 +1,7 @@
 Source: ffmpegthumbnailer
 Section: video
 Priority: optional
-Maintainer: Debian Multimedia Maintainers <debian-multimedia@lists.debian.org>
-Uploaders:
- Boyuan Yang <byang@debian.org>,
+Maintainer: Debian QA Group <packages@qa.debian.org>
 Build-Depends:
  cmake,
  debhelper-compat (= 13),
@@ -13,11 +11,11 @@ Build-Depends:
  libavutil-dev,
  libjpeg-dev,
  libpng-dev,
- pkg-config,
-Standards-Version: 4.6.2
+ pkgconf,
+Standards-Version: 4.7.0
 Homepage: https://github.com/dirkvdb/ffmpegthumbnailer
-Vcs-Git: https://salsa.debian.org/multimedia-team/ffmpegthumbnailer.git
-Vcs-Browser: https://salsa.debian.org/multimedia-team/ffmpegthumbnailer
+Vcs-Git: https://salsa.debian.org/debian/ffmpegthumbnailer.git
+Vcs-Browser: https://salsa.debian.org/debian/ffmpegthumbnailer
 
 Package: ffmpegthumbnailer
 Architecture: any

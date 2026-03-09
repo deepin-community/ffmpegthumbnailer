@@ -5,7 +5,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(PACKAGE "ffmpegthumbnailer")
 set(PACKAGE_VERSION_MAJOR 2)
 set(PACKAGE_VERSION_MINOR 2)
-set(PACKAGE_VERSION_PATCH 2)
+set(PACKAGE_VERSION_PATCH 3)
 set(PACKAGE_VERSION ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH})
 
 set(CPACK_PACKAGE_NAME ${PACKAGE})
@@ -53,7 +53,7 @@ if (NOT TARGET FFmpeg::avcodec)
 endif ()
 
 find_package(JPEG)
-if (JPEG_FOUND)
+if (TARGET JPEG::JPEG)
     set(HAVE_JPEG ON)
 endif ()
 
@@ -97,8 +97,8 @@ target_link_libraries(libffmpegthumbnailerobj
     FFmpeg::avcodec
     FFmpeg::avutil
     FFmpeg::avfilter
-    $<$<BOOL:${HAVE_JPEG}>:${JPEG_LIBRARIES}>
-    $<$<BOOL:${HAVE_PNG}>:PNG::PNG>
+    $<TARGET_NAME_IF_EXISTS:JPEG::JPEG>
+    $<TARGET_NAME_IF_EXISTS:PNG::PNG>
 )
 
 # we use our own deprecated struct menbers, so disable the warning about it
