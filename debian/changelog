@@ -1,3 +1,9 @@
+ffmpegthumbnailer (2.2.3-3) unstable; urgency=medium
+
+  * Rebuild with LTO enabled (dpkg vendor feature optimize/lto).
+
+ -- tunaichao <tunaichao@uniontech.com>  Fri, 11 Sep 2026 14:35:19 +0800
+
 ffmpegthumbnailer (2.2.3-2) unstable; urgency=medium
 
   * QA upload.
